@@ -44,3 +44,37 @@ pbmc = sc.datasets.pbmc68k()
 * Merging anndata objects, the `combine` part of `split-apply-combine`
 * Figure out how to allow mutations with callables
     * `.mutate_{attr}({attr_key}={callable})`?
+
+## Ideas
+
+### Mostly copy what xarray does
+
+```python
+import scanpy as sc
+import xarray as xr
+import pandas as pd
+import numpy as np
+
+adata = sc.datasets.pbmc68k_reduced()
+adata.obs_names.name = "obs"
+adata.var_names.name = "var"
+
+ds = xr.Dataset(
+    {
+        "X": (["obs", "var"], adata.X),
+        "X_raw": (["obs", "var"], adata.raw.X.toarray()),
+        "louvain": (["obs"], adata.obs["louvain"]),
+        "pca": (["obs", "pc"], adata.obsm["X_pca"]),
+        "pcs": (["var", "pc"], adata.varm["PCs"]),
+        "umap": (["obs", "umap_comp"], adata.obsm["X_umap"]),
+    },
+    coords={
+        "var": adata.var_names,
+        "obs": adata.obs_names
+    }
+)
+
+groupedX = ds[["X", "louvain"]].groupby("louvain")
+mean = groupedX.mean(dim="obs")
+var = groupedX.var(dim="obs")
+```
